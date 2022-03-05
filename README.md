@@ -2,14 +2,13 @@
 
 ## Summary:
 
-*The purpose of this project is to assess, analyze and harden a vulnerable web server, while monitoring its logs
-This project was hosted in Azure Cloud, by leveraging the Hyper-V Manager on a Windows machine. The three virtual machines deployed off Hyper-V are: *
+The purpose of this project is to assess, analyze and harden a vulnerable web server, while monitoring its logs.
 
-*1. The **"Capstone VM"** - Hostname: Server 1, running the Web Server, FileBeat, MetricBeat and PacketBeat. *
+This project was hosted in Azure Cloud, by leveraging the Hyper-V Manager on a Windows machine. The three virtual machines deployed off Hyper-V are:
 
-*2. The logs generated are then sent out to the second machine, the **"ELK VM"** - Hostname: ELK, running Elasticsearch, Logstash and Kibana. *
-
-*3. The attacker machine used in this scenario is the **"Kali VM"** - Hostname: Kali, running PacketBeat.*
+1. The **"Capstone VM"** - Hostname: Server 1, running the Web Server, FileBeat, MetricBeat and PacketBeat.
+2. The logs generated are then sent out to the second machine, the **"ELK VM"** - Hostname: ELK, running Elasticsearch, Logstash and Kibana.
+3. The attacker machine used in this scenario is the **"Kali VM"** - Hostname: Kali, running PacketBeat.
 
 >NOTE: All virtual machines are hosted on the same virtual subnet: *192.168.1.0/24*.
 
