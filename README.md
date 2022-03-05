@@ -15,6 +15,7 @@ Network Diagram:
 <img width="1301" alt="Network Diagram" src="https://user-images.githubusercontent.com/90374994/155470755-b24bfbd8-3198-4cb1-b42b-b24092328429.png">
 
 
+
 ## Red Team - Security Assessment
 
 First step is to run a quick network scan:
@@ -131,6 +132,7 @@ Flag found:
 ![Screen Shot 2022-02-15 at 18 51 08 PM](https://user-images.githubusercontent.com/90374994/156853589-ceec7eb8-0878-4829-8671-88e76f89d631.png)
 
 
+
 ## Blue Team - Log Analysis and Attack Characterization
 
 >During this phase, we will be able to see and analyze logs, generated from the activities above. The logs were generated using FileBeat, MetricBeat and PacketBeat, and we will leverage Kibana, to analyze them.
@@ -189,7 +191,7 @@ This shows the folder was accessed twice from the browser. We can further look i
 Here, we can see there were 17,866 brute force attempts made to find the correct password for ashton's account
 
 
-Third, let's look at the WebDAV connection logs. We can apply the following filter: "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and url.full:"http://192.168.1.105/webdav/"" and we can further narrow it down to when the shell.php was accessed by changing the URL in the search bar: "url.full:"http://192.168.1.105/webdav/shell.php""
+Third, let's look at the WebDAV connection logs. We can apply the following filter: "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and url.full:"http://192.168.1.105/webdav/"" and we can further narrow it down to when the shell.php was accessed by changing the URL in the search bar to: "url.full:"http://192.168.1.105/webdav/shell.php""
 
 ![webdav](https://user-images.githubusercontent.com/90374994/156858793-51b1a743-2e60-469f-8a13-939d42baa9ae.png)
 
@@ -197,5 +199,45 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
 
 
 
+## Blue Team - Mitigation Strategies and Proposed Alarms
+
+>NOTE: the threashold for alerts should be tuned accordingly to the environment. This is a small "closed environment", and the numbers used are calculated using current baselines, for our web traffic.
+
+**1. Blocking the Port Scan**
+**Mitigation strategies:**
+  -first thing we can do is disable ICMP echo requests. This is not return any results for any echo requests:
+  
+  ```bash
+  net.ipv4.icmp_echo_ignore_all = 1
+  ```
+  
+  -second thing we can do is shrink the attack surface an attacker would have access to. In order to achieve this, we should close any unnecessarly open ports, and add firewall rules to stop traffic to/from certain ports exposed to the internet.
+  
+  -third, we could add an IPS system to activly monitor and detect, blocking port scans specifically.
+  
+**Alarms**
+  -using Kibana, we can create a custom alert that triggers when an unique *Source IP* reaches out to 10 or more ports on the same *Destination IP* within 1 minute time frame
+
+
+**2. Detecting Unauthorized Access**
+**Mitigation strategies:**
+  -since the *Secret Folder* is only supposed to be accessed by certain individuals we could create a rule of *White-listed IP Addresses* that would have access to the folder. Anyone outside of the listed IPs would not be able to access it.
+  -in this situation, the folder is pretty redundant, serving little to no purpose, and should be removed from the web server completly.
+  
+**Alarms**
+  -create an alarm that triggers when more than 5 "Error 401s" return, when access requests are made to the "/secret_folder/".
+  
+  
+**3. Preventing Brute Force Attacks**
+**Mitigation strategies:**
+  -limit the number of failed login attempts by changing the account lockout policy.
+  -add a Captcha to the login page.
+  -enforce a stricter password policy, where users have to use a combination of small letters, capital letters, numbers and symbols, with a minimum password length of 8 characters.
+  -request additional information to log in, by leveraging multi factor authentication. 
+  -use something similar to *fail2ban* to ban IP addresses that are generating more than 10 failed attempts.
+  
+**Alarms**
+  -first alert should trigger when more than 10 "Error 401" return withing 1 minutes.
+  -second alert should trigger immediately if any user agents such as Hydra are being detected.
 
 
