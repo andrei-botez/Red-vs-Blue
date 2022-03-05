@@ -204,7 +204,9 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
 >NOTE: the threashold for alerts should be tuned accordingly to the environment. This is a small "closed environment", and the numbers used are calculated using current baselines, for our web traffic.
 
 **1. Blocking the Port Scan**
+
 **Mitigation strategies:**
+
   -first thing we can do is disable ICMP echo requests. This is not return any results for any echo requests:
   
   ```bash
@@ -216,20 +218,26 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   -third, we could add an IPS system to activly monitor and detect, blocking port scans specifically.
   
 **Alarms**
+
   -using Kibana, we can create a custom alert that triggers when an unique *Source IP* reaches out to 10 or more ports on the same *Destination IP* within 1 minute time frame
 
 
 **2. Detecting Unauthorized Access**
+
 **Mitigation strategies:**
+
   -since the *Secret Folder* is only supposed to be accessed by certain individuals we could create a rule of *White-listed IP Addresses* that would have access to the folder. Create a second rule to deny access to anyone outside of the listed IPs.
   -in this situation, the folder is pretty redundant, serving little to no purpose, and should be removed from the web server completly.
   
 **Alarms**
+
   -create an alarm that triggers when more than 5 "Error 401s" return, when access requests are made to the "/secret_folder/".
   
   
 **3. Preventing Brute Force Attacks**
+
 **Mitigation strategies:**
+
   -limit the number of failed login attempts by changing the account lockout policy.
   -add a Captcha to the login page.
   -enforce a stricter password policy, where users have to use a combination of small letters, capital letters, numbers and symbols, with a minimum password length of 8 characters.
@@ -237,25 +245,32 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   -use something similar to *fail2ban* to ban IP addresses that are generating more than 10 failed attempts.
   
 **Alarms**
+
   -first alert should trigger when more than 10 "Error 401" return withing 1 minutes.
   -second alert should trigger immediately if any user agents such as Hydra are being detected.
 
 
 **4. Detecting the WebDAV Connection**
+
 **Mitigation strategies:**
+
   -just like the *Secret Folder*, there should be a rule in place allowing only certain IP Addresses to access the /webdav/ directory. Create another rule to deny access to anyone outside of the listed IPs.
   -anyone with access to this directory should follow the same password policy mentioned above.
   
 **Alarms**
+
   -create an alarm that triggers when any files are uploaded to the /webdav/ folder.
   
 
 **4. Identify Reverse Shell Uploads**
+
 **Mitigation strategies:**
+
   -deny uploads of select file extentions by whitelisting only allowed file types, that support business objectives.
   -remove execute permission for any uploaded files to /webdav/ (Allow only read/write permission).
   
 **Alarms**
+
   -create an alarm that triggers when there's any traffic detected outside of ports 22 and 80.
   -as mentioned before, an alarm that triggers when there are any uploads made to WebDAV.
   
