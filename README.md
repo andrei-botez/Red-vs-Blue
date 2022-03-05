@@ -153,9 +153,13 @@ Once we fire up Kibana from our Windows host machine (Navigate to http://192.168
 Logs to be added:
 
 *1. Apache Logs*
+
 *2. System Logs*
+
 *3. Apache Metrics*
+
 *4. System Metrics*
+
 
 >Note: Once the logs and metric data are added, click *"Check data"* at the bottom and make sure you get a message saying *"Data successfully received from this module"*:
 
@@ -171,13 +175,21 @@ Next step is to **Create a Kibana Dashboard**. For this step we will need to add
 Search for the following panels and add them to the dashboard:
 
 *1.	HTTP status codes for the top queries [Packetbeat] ECS*
+
 *2.	Top 10 HTTP requests [Packetbeat] ECS*
+
 *3.	Network Traffic Between Hosts [Packetbeat Flows] ECS*
+
 *4.	Top Hosts Creating Traffic [Packetbeat Flows] ECS*
+
 *5.	Connections over time [Packetbeat Flows] ECS*
+
 *6.	HTTP error codes [Packetbeat] ECS*
+
 *7.	Errors vs successful transactions [Packetbeat] ECS*
+
 *8.	HTTP Transactions [Packetbeat] ECS*
+
 
 
 Now, we are ready to dig in, and find the log events we are looking for.
