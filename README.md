@@ -221,7 +221,7 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
 
 **2. Detecting Unauthorized Access**
 **Mitigation strategies:**
-  -since the *Secret Folder* is only supposed to be accessed by certain individuals we could create a rule of *White-listed IP Addresses* that would have access to the folder. Anyone outside of the listed IPs would not be able to access it.
+  -since the *Secret Folder* is only supposed to be accessed by certain individuals we could create a rule of *White-listed IP Addresses* that would have access to the folder. Create a second rule to deny access to anyone outside of the listed IPs.
   -in this situation, the folder is pretty redundant, serving little to no purpose, and should be removed from the web server completly.
   
 **Alarms**
@@ -241,3 +241,24 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   -second alert should trigger immediately if any user agents such as Hydra are being detected.
 
 
+**4. Detecting the WebDAV Connection**
+**Mitigation strategies:**
+  -just like the *Secret Folder*, there should be a rule in place allowing only certain IP Addresses to access the /webdav/ directory. Create another rule to deny access to anyone outside of the listed IPs.
+  -anyone with access to this directory should follow the same password policy mentioned above.
+  
+**Alarms**
+  -create an alarm that triggers when any files are uploaded to the /webdav/ folder.
+  
+
+**4. Identify Reverse Shell Uploads**
+**Mitigation strategies:**
+  -deny uploads of select file extentions by whitelisting only allowed file types, that support business objectives.
+  -remove execute permission for any uploaded files to /webdav/ (Allow only read/write permission).
+  
+**Alarms**
+  -create an alarm that triggers when there's any traffic detected outside of ports 22 and 80.
+  -as mentioned before, an alarm that triggers when there are any uploads made to WebDAV.
+  
+>Thank you for reading this article, I hope it brought new ideas on how to apply some level of security to your real life environment.
+>Author: Andrei Botez
+>Date: March 4, 2022
