@@ -298,7 +298,7 @@ Here, we can see there were 17,866 brute force attempts made to find the correct
   -as mentioned before, an alarm that triggers when there are any uploads made to WebDAV.
   
   
+  
 >*Thank you for reading this article, I hope it brought new ideas on how to apply some level of security to any real-life environment.*
->*Author: Andrei Botez*
->
+
 >*Date: March 4, 2022*
